@@ -1,6 +1,6 @@
 from flask import request, jsonify, render_template
 from app import app
-from rag import ragg
+from gemini import fact_check
 import json
 
 # @app.route("/api/gemini", methods=["GET"])
@@ -17,7 +17,7 @@ def home():
     return render_template("index.html")
 
 @app.route("/api/gemini", methods=["POST"])
-def rag_route():
+def fact_check_route():
     try:
         if request.content_type != 'application/json':
             raise ValueError("Content-Type must be 'application/json'")
@@ -27,10 +27,10 @@ def rag_route():
         if not data or "content" not in data:
             raise ValueError("No content provided in the request body")
 
-        question = data.get("content", "")
+        content = data.get("content", "")
         
-        result = ragg(question)
-        print(f"RAG Response: {result}")
+        result = fact_check(content)
+        print(f"Fact Check Response: {result}")
         
         return jsonify(result), 200
     
@@ -38,7 +38,7 @@ def rag_route():
         return jsonify({"error": str(e)}), 400
     
     except Exception as e:
-        print(f"Error in rag_route: {str(e)}")
+        print(f"Error in fact_check_route: {str(e)}")
         return jsonify({"error": "An error occurred during the request processing."}), 500
 
 @app.route("/api/verify", methods=["GET"])

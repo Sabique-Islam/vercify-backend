@@ -162,9 +162,9 @@ def is_pesu_related(question):
     return any(keyword in question_lower for keyword in pesu_keywords)
 
 class RAGResponse(BaseModel):
-    answer: str
-    source_context: str
-    confidence_score: float
+    status: str
+    score: float
+    verification_details: str
 
 def ragg(question):
     retrieved_answer = retrieve_answer(question)
@@ -174,48 +174,50 @@ def ragg(question):
 
     if retrieved_answer:
         prompt = f"""You are a knowledgeable assistant with access to a database of accurate information. 
-        Answer the question using the provided context as your primary source, and supplement with your knowledge when needed.
+        Analyze and verify the following question using the provided context.
 
         Context from database: {retrieved_answer}
         Question: {question}
 
-        Instructions:
-        1. Primary Source Usage:
-           - First, use the information from the provided context
-           - Highlight specific details from the context when relevant
-           - If multiple pieces of information are provided, combine them coherently
+        Important: Format your response exactly as follows:
+        1. First determine if the information is:
+           - Verified (if context directly answers the question)
+           - Partially Verified (if context is somewhat relevant)
+           - Unverified (if no relevant context found)
 
-        2. Knowledge Integration:
-           - Supplement the context with additional relevant information
-           - Ensure all information is accurate and up-to-date
-           - If there's any conflict between context and current knowledge, acknowledge it
+        2. Provide a confidence score (0-10) based on how well the context matches
 
-        3. Response Format:
-           - Be direct and concise
-           - Use plain text without special formatting
-           - Structure the response logically
-           - If uncertain about any details, acknowledge the limitations
+        3. Give a detailed but concise explanation using the context and your knowledge
 
-        Remember: The context provided is from a reliable source, so prioritize this information in your response.
+        Remember: Prioritize information from the provided context.
         """
     else:
-        prompt = f"""You are a knowledgeable assistant. While no specific context was found in our database, 
-        please provide a comprehensive answer based on your understanding.
-
+        prompt = f"""You are a knowledgeable assistant. Analyze and verify the following question:
         Question: {question}
 
-        Instructions:
-        - Provide accurate, up-to-date information
-        - Be direct and concise
-        - Use plain text without special formatting
-        - If the question is about PESU or related topics, mention that specific information might be limited
-        - Acknowledge any uncertainties
+        Important: Format your response exactly as follows:
+        1. Status: Unverified (since no context was found in database)
+        2. Provide a confidence score (0-10) based on your knowledge
+        3. Give a detailed but concise explanation based on your understanding
         """
 
     response = gemini.generate_content(prompt)
+    
+    response_text = response.text
+    
+    status = "Unverified"
+    score = float(confidence_score * 10) 
+    
+    if retrieved_answer:
+        if confidence_score > 0.8:
+            status = "Verified"
+        elif confidence_score > 0.5:
+            status = "Partially Verified"
+    
     result = RAGResponse(
-        answer=response.text,
-        source_context=retrieved_answer if retrieved_answer else "No relevant context found - Using general knowledge",
-        confidence_score=float(confidence_score)
+        status=status,
+        score=score,
+        verification_details=response_text
     ).dict()
+    
     return result
