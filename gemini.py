@@ -49,7 +49,7 @@ Output Format:
 
     try:
         completion = client.beta.chat.completions.parse(
-            model="gemini-1.5-flash",
+            model="gemini-2.0-flash",
             messages=[
                 {"role": "system", "content": "Analyze the content."},
                 {"role": "user", "content": prompt},
